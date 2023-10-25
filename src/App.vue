@@ -1,41 +1,27 @@
 
 <script setup lang="ts">
-let code: string[] = Array(6);
-let dataFromPaste: string[] | undefined;
-const keysAllowed: string[] = [
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-];
+import { ref, watchEffect } from "vue";
 
-function isNumber(event: Event) {
- 
-  (event.currentTarget as HTMLInputElement).value = "";
-  const keyPressed: string = (event as KeyboardEvent).key;
-  if (!keysAllowed.includes(keyPressed)) {
-    event.preventDefault();
-  }
+
+const code = ref<string[]>(Array(6));
+const codeFromPaste = ref<string[]>([]);
+
+const handleKeyPress = (event: KeyboardEvent): void => {
+  isNaN(+event.key) ? event.preventDefault() : (event.currentTarget as HTMLInputElement).value = '';
 }
-function handleInput(event: Event) {
 
-  const inputType = (event as InputEvent).inputType;
+const handleInput = (event: InputEvent): void => {
   let currentActiveElement = event.target as HTMLInputElement;
 
-  if (inputType === "insertText")
+  if (event.inputType === "insertText") {
     (currentActiveElement.nextElementSibling as HTMLElement)?.focus();
+  }
 
-  if (inputType === "insertFromPaste" && dataFromPaste) {
-    for (const num of dataFromPaste) {
-      let id: number = parseInt(currentActiveElement.id.split("_")[1]);
-      currentActiveElement.value = num;
-      code[id] = num;
+  if (event.inputType === "insertFromPaste" && codeFromPaste) {
+    for (const number of codeFromPaste.value) {
+      const currentInputId: number = parseInt(currentActiveElement.id.split("_")[1]);
+      currentActiveElement.value = number;
+      code[currentInputId] = number;
       if (currentActiveElement.nextElementSibling) {
         currentActiveElement =
           currentActiveElement.nextElementSibling as HTMLInputElement;
@@ -43,28 +29,19 @@ function handleInput(event: Event) {
       }
     }
   }
-  console.log(code);
-}
-function handleDelete(event: Event) {
-  //keydown event = move to previous element then only delete number
-
-  let value = (event.target as HTMLInputElement).value;
-  let currentActiveElement = event.target as HTMLInputElement;
-  if (!value)
-    (currentActiveElement.previousElementSibling as HTMLElement)?.focus();
 }
 
-function onPaste(event: Event) {
-  dataFromPaste = (event as ClipboardEvent).clipboardData
+const handleDelete = (event: Event): void => {
+  const input = event.target as HTMLInputElement;
+  !input.value && (input.previousElementSibling as HTMLElement)?.focus();
+}
+
+const handlePaste = (event: ClipboardEvent): void => {
+  codeFromPaste.value = event.clipboardData
     ?.getData("text")
     .trim()
     .split("");
-
-  if (dataFromPaste) {
-    for (const num of dataFromPaste) {
-      if (!keysAllowed.includes(num)) event.preventDefault();
-    }
-  }
+  codeFromPaste?.some((number: string) => isNaN(+number)) && event.preventDefault();
 }
 </script>
 
@@ -75,17 +52,17 @@ function onPaste(event: Event) {
     <div class="child">
       <form>
         <input
-          v-for="(n, index) in code"
+          v-for="(_, index) in code"
           :key="index"
           type="number"
+          :id="`code_${index}`"
           pattern="\d*"
-          :id="'input_' + index"
           maxlength="1"
           v-model="code[index]"
           @input="handleInput"
-          @keypress="isNumber"
+          @keypress="handleKeyPress"
           @keydown.delete="handleDelete"
-          @paste="onPaste"
+          @paste="handlePaste"
         />
       </form>
     </div>
